@@ -21,11 +21,11 @@ from resnet import *
 
 # parse arguments
 parser = argparse.ArgumentParser(description='Imbalanced Example')
-parser.add_argument('--dataset', default='cifar10', type=str,
+parser.add_argument('--dataset', default='cifar100', type=str,
                     help='dataset (cifar10 [default] or cifar100)')
 parser.add_argument('--batch-size', type=int, default=100, metavar='N',
                     help='input batch size for training (default: 64)')
-parser.add_argument('--num_classes', type=int, default=10)
+parser.add_argument('--num_classes', type=int, default=100)
 parser.add_argument('--num_meta', type=int, default=10,
                     help='The number of meta data for each class.')
 parser.add_argument('--imb_factor', type=float, default=0.1)
@@ -231,7 +231,7 @@ def validate(val_loader, model, criterion, epoch):
 
     end = time.time()
     for i, (input, target) in enumerate(val_loader):
-        target = target.cuda(async=True)
+        target = target.cuda()
         input = input.cuda()
         input_var = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
