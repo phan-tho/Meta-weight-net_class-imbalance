@@ -1,3 +1,4 @@
+import json
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -44,8 +45,14 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
 parser.add_argument('--split', type=int, default=1000)
 parser.add_argument('--seed', type=int, default=42, metavar='S',
                     help='random seed (default: 42)')
-parser.add_argument('--print-freq', '-p', default=10, type=int,
-                    help='print frequency (default: 10)')
+parser.add_argument('--print-freq', '-p', default=100, type=int,
+                    help='print frequency (default: 100)')
+
+parser.add_argument('--name_file_log', type=str, default='log/log_loss.json',
+                    help='name of the log file')
+
+parser.add_argument('--log_weight_path', default='log/log_weight.json', type=str, help='file to save log weight')
+
 args = parser.parse_args()
 print(args)
 
@@ -101,6 +108,15 @@ best_prec1 = 0
 def main():
     global args, best_prec1
     args = parser.parse_args()
+
+    # Set up logging
+    if not os.path.exists(args.name_file_log):
+        with open(args.name_file_log, 'w') as f:
+            json.dump({}, f, indent=4)
+
+    if not os.path.exists(args.log_weight_path):
+        with open(args.log_weight_path, 'w') as f:
+            json.dump({}, f, indent=4)
 
     # create model
     model = build_model()
@@ -158,6 +174,16 @@ def train(train_loader, validation_loader,model, vnet,optimizer_a,optimizer_c,ep
         cost_v = torch.reshape(cost, (len(cost), 1))
 
         v_lambda = vnet(cost_v)
+        if i == 0 and epoch % 10 == 0:
+            loss_weights = v_lambda.detach().cpu().numpy().tolist()
+            cost_weights = cost_v.detach().cpu().numpy().tolist()
+            log = {str(epoch + 1): {'v_lambda': loss_weights, 'cost': cost_weights}}
+            with open(args.log_weight_path, 'r+') as f:
+                data = json.load(f)
+                data.update(log)
+                f.seek(0)
+                json.dump(data, f, indent=4)
+                f.truncate()
 
         norm_c = torch.sum(v_lambda)
 
@@ -220,6 +246,14 @@ def train(train_loader, validation_loader,model, vnet,optimizer_a,optimizer_c,ep
                 epoch, i, len(train_loader),
                 loss=losses,meta_loss=meta_losses, top1=top1,meta_top1=meta_top1))
 
+    log = {'train': {'loss_train': float(losses.avg), 'acc_train': float(top1.avg), 'loss_meta': float(meta_losses.avg), 'acc_meta': float(meta_top1.avg)}}
+    # save log to json file
+    with open(args.name_file_log, 'r+') as f:
+        data = json.load(f)
+        data[str(epoch + 1)] = log
+        f.seek(0)
+        json.dump(data, f, indent=4)
+        f.truncate()
 
 def validate(val_loader, model, criterion, epoch):
     """Perform validation on the validation set"""
@@ -261,6 +295,14 @@ def validate(val_loader, model, criterion, epoch):
 
     print(' * Prec@1 {top1.avg:.3f}'.format(top1=top1))
     # log to TensorBoard
+
+    log = {'loss_test': float(losses.avg), 'acc_test': float(top1.avg)}
+    with open(args.name_file_log, 'r+') as f:
+        data = json.load(f)
+        data[str(epoch + 1)]['test'] = log
+        f.seek(0)
+        json.dump(data, f, indent=4)
+        f.truncate()
 
     return top1.avg
 

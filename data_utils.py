@@ -45,6 +45,7 @@ def build_dataset(dataset,num_meta):
 
     data_list_val = {}
     for j in range(num_classes):
+        
         data_list_val[j] = [i for i, label in enumerate(train_dataset.targets) if label == j]
         # 'CIFAR10' object has no attribute 'train_labels'
 
