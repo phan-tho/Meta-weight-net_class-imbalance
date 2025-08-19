@@ -62,12 +62,13 @@ train_loader = torch.utils.data.DataLoader(
 
 # make imbalanced data
 torch.manual_seed(args.seed)
-classe_labels = range(args.num_classes)
+class_labels = range(args.num_classes)
 
 data_list = {}
 
 for j in range(args.num_classes):
-    data_list[j] = [i for i, label in enumerate(train_loader.dataset.train_labels) if label == j]
+    data_list[j] = [i for i, label in enumerate(train_loader.dataset.targets) if label == j]
+    # 'CIFAR100' object has no attribute 'train_labels'
 
 img_num_list = get_img_num_per_cls(args.dataset,args.imb_factor,args.num_meta*args.num_classes)
 print(img_num_list)
@@ -83,8 +84,8 @@ for cls_idx, img_id_list in data_list.items():
 print(len(idx_to_del))
 
 imbalanced_train_dataset = copy.deepcopy(train_data)
-imbalanced_train_dataset.train_labels = np.delete(train_loader.dataset.train_labels, idx_to_del, axis=0)
-imbalanced_train_dataset.train_data = np.delete(train_loader.dataset.train_data, idx_to_del, axis=0)
+imbalanced_train_dataset.targets = np.delete(train_loader.dataset.targets, idx_to_del, axis=0)
+imbalanced_train_dataset.data = np.delete(train_loader.dataset.data, idx_to_del, axis=0)
 imbalanced_train_loader = torch.utils.data.DataLoader(
     imbalanced_train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
 
